@@ -15,9 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract project ZIP
-        run: unzip -o Star-v3.zip -d .
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -34,12 +31,20 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
+      - name: Locate project folder
+        id: loc
+        run: |
+          f=$(find . -name settings.gradle.kts -not -path "*/build/*" | head -n1)
+          if [ -z "$f" ]; then echo "settings.gradle.kts not found"; exit 1; fi
+          echo "dir=$(dirname "$f")" >> "$GITHUB_OUTPUT"
+
       - name: Build debug APK
+        working-directory: ${{ steps.loc.outputs.dir }}
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Star-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: ${{ steps.loc.outputs.dir }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
